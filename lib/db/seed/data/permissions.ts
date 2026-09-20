@@ -46,6 +46,10 @@ export const PERMISSIONS = [
   // RBAC / PBAC
   "authorization.view",
   "authorization.manage",
+
+    // Tenant
+  "tenant.view",
+  "tenant.manage",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number];

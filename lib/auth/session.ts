@@ -5,8 +5,8 @@ import { SESSION_COOKIE_NAME, SESSION_DURATION_MS } from "./config";
 export interface SessionPayload extends JWTPayload {
   userId: number;
   organizationId: number;
+  sessionId: string;
 }
-
 const encodedKey = new TextEncoder().encode(process.env.SESSION_SECRET!);
 
 export async function encryptSession(payload: SessionPayload) {
@@ -20,7 +20,9 @@ export async function encryptSession(payload: SessionPayload) {
 export async function decryptSession(token?: string) {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, encodedKey, { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, encodedKey, {
+      algorithms: ["HS256"],
+    });
     return payload as SessionPayload;
   } catch {
     return null;

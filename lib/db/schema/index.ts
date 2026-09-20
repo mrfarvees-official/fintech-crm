@@ -9,3 +9,4 @@ export * from "./audit";
 export * from "./notifications";
 export * from "./settings";
 export * from "./pbac";
+export * from "./sessions";

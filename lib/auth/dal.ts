@@ -3,17 +3,15 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-
 import { db } from "@/lib/db";
 import { users, organizations } from "@/lib/db/schema";
-
-import { readSessionCookie } from "./session";
+import { readSessionCookie,  } from "./session";
+import { isSessionRevoked } from "./session-device";
 
 export const verifySession = cache(async () => {
   const session = await readSessionCookie();
-  if (!session?.userId) {
-    redirect("/login");
-  }
+  if (!session?.userId) redirect("/login");
+  if (await isSessionRevoked(session.sessionId)) redirect("/login");
   return session;
 });
 

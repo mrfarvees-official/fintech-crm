@@ -18,6 +18,8 @@ export const organizations = mysqlTable(
   {
     id: bigint("id", { mode: "number" }).primaryKey().autoincrement(),
 
+    ownerId: bigint("owner_id", { mode: "number" }),
+
     name: varchar("name", { length: 150 }).notNull(),
 
     code: varchar("code", { length: 50 }).notNull(),

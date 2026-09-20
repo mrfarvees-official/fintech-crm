@@ -51,9 +51,14 @@ export const POLICY_SEEDS = [
 
     subjects: [
       {
-        attribute: "roles",
-        operator: "CONTAINS" as const,
-        value: "COMPLIANCE_OFFICER",
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "COMPLIANCE",
+      },
+      {
+        attribute: "status",
+        operator: "EQUALS" as const,
+        value: "ACTIVE",
       },
     ],
 
@@ -84,9 +89,14 @@ export const POLICY_SEEDS = [
 
     subjects: [
       {
-        attribute: "roles",
-        operator: "CONTAINS" as const,
-        value: "COMPLIANCE_MANAGER",
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "MANAGEMENT",
+      },
+      {
+        attribute: "status",
+        operator: "EQUALS" as const,
+        value: "ACTIVE",
       },
     ],
 
@@ -124,9 +134,14 @@ export const POLICY_SEEDS = [
 
     subjects: [
       {
-        attribute: "roles",
-        operator: "CONTAINS" as const,
-        value: "COMPLIANCE_OFFICER",
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "COMPLIANCE",
+      },
+      {
+        attribute: "status",
+        operator: "EQUALS" as const,
+        value: "ACTIVE",
       },
     ],
 
@@ -164,9 +179,14 @@ export const POLICY_SEEDS = [
 
     subjects: [
       {
-        attribute: "roles",
-        operator: "CONTAINS" as const,
-        value: "KYC_ANALYST",
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "KYC",
+      },
+      {
+        attribute: "status",
+        operator: "EQUALS" as const,
+        value: "ACTIVE",
       },
     ],
 
@@ -199,9 +219,14 @@ export const POLICY_SEEDS = [
 
     subjects: [
       {
-        attribute: "roles",
-        operator: "CONTAINS" as const,
-        value: "RELATIONSHIP_MANAGER",
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "RELATIONSHIP",
+      },
+      {
+        attribute: "status",
+        operator: "EQUALS" as const,
+        value: "ACTIVE",
       },
     ],
 

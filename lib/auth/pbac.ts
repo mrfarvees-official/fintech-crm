@@ -160,45 +160,38 @@ async function loadPolicies(
   action: string,
   resourceType: string,
 ): Promise<PolicyDefinition[]> {
-  const rows = await db.query.policies.findMany({
-    where: (p, { and, eq, or, isNull }) =>
+  const rows = await db
+    .select()
+    .from(policies)
+    .where(
       and(
-        eq(p.action, action),
-        eq(p.resourceType, resourceType),
-        eq(p.isActive, true),
-        or(eq(p.organizationId, organizationId), isNull(p.organizationId)),
+        eq(policies.action, action),
+        eq(policies.resourceType, resourceType),
+        eq(policies.isActive, true),
       ),
-    with: {
-      policySubjects: true,
-      policyResources: true,
-      policyConditions: true,
-    } as any,
-  });
+    );
 
-  // Fallback if relations aren't declared on the schema — fetch manually.
+  const scoped = rows.filter(
+    (p) => p.organizationId === organizationId || p.organizationId === null,
+  );
+
   return Promise.all(
-    rows.map(async (p: any) => ({
+    scoped.map(async (p) => ({
       id: p.id,
       effect: p.effect,
       priority: p.priority,
-      subjectRules:
-        p.policySubjects ??
-        (await db
-          .select()
-          .from(policySubjects)
-          .where(eq(policySubjects.policyId, p.id))),
-      resourceRules:
-        p.policyResources ??
-        (await db
-          .select()
-          .from(policyResources)
-          .where(eq(policyResources.policyId, p.id))),
-      conditions:
-        p.policyConditions ??
-        (await db
-          .select()
-          .from(policyConditions)
-          .where(eq(policyConditions.policyId, p.id))),
+      subjectRules: await db
+        .select()
+        .from(policySubjects)
+        .where(eq(policySubjects.policyId, p.id)),
+      resourceRules: await db
+        .select()
+        .from(policyResources)
+        .where(eq(policyResources.policyId, p.id)),
+      conditions: await db
+        .select()
+        .from(policyConditions)
+        .where(eq(policyConditions.policyId, p.id)),
     })),
   );
 }

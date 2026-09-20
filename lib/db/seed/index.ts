@@ -1,42 +1,36 @@
+// lib/db/seed/index.ts
+
 import { config } from "dotenv";
 
 config({
-  path: ".env.local",
+  path: ".env",
 });
 
-import { db } from "@/lib/db";
-
 import { seedOrganization } from "./modules/organization.seed";
-import { seedRbac } from "./modules/rbac.seed";
-import { seedUsers } from "./modules/users.seed";
+import { seedUsers } from "./modules/user.seed";
 import { seedPbac } from "./modules/pbac.seed";
 import { seedCrm } from "./modules/crm.seed";
 
 async function seed() {
+  // Import DB only AFTER dotenv has been loaded.
+  const { db } = await import("@/lib/db");
+
   console.log("🌱 Starting database seed...");
 
   await db.transaction(async (tx) => {
     const organization = await seedOrganization(tx);
 
-    const rbac = await seedRbac(tx, {
-      organizationId: organization.id,
-    });
-
     const users = await seedUsers(tx, {
       organizationId: organization.id,
-      roles: rbac.roles,
     });
 
-    const pbac = await seedPbac(tx, {
+    await seedPbac(tx, {
       organizationId: organization.id,
-      users,
-      roles: rbac.roles,
     });
 
     await seedCrm(tx, {
       organizationId: organization.id,
       users,
-      pbac,
     });
   });
 

@@ -1,8 +1,6 @@
 export const DEMO_ORGANIZATION_SETTINGS = {
-  timezone: "Asia/Colombo",
-  currency: "LKR",
-  locale: "en-LK",
-
-  kycAutoApprovalEnabled: false,
-  makerCheckerEnabled: true,
-};
+  mediumRiskThreshold: 30,
+  highRiskThreshold: 60,
+  requireManagerForHighRisk: true,
+  kycExpiryDays: 365,
+} as const;

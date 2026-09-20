@@ -10,7 +10,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:reset": "tsx lib/db/reset.ts",
+    "db:seed": "tsx lib/db/seed/index.ts",
+    "db:fresh": "npm run db:reset && npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
     "dotenv": "^18.0.1",
@@ -30,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

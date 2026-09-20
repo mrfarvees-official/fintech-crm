@@ -10,6 +10,9 @@ import { seedOrganization } from "./modules/organization.seed";
 import { seedUsers } from "./modules/user.seed";
 import { seedPbac } from "./modules/pbac.seed";
 import { seedCrm } from "./modules/crm.seed";
+import { seedKyc } from "./modules/kyc.seed";
+import { seedAudit } from "./modules/audit.seed";
+import { seedNotifications } from "./modules/notification.seed";
 
 async function seed() {
   // Import DB only AFTER dotenv has been loaded.
@@ -29,6 +32,21 @@ async function seed() {
     });
 
     await seedCrm(tx, {
+      organizationId: organization.id,
+      users,
+    });
+
+    await seedKyc(tx, {
+      organizationId: organization.id,
+      users,
+    });
+
+    await seedAudit(tx, {
+      organizationId: organization.id,
+      users,
+    });
+
+    await seedNotifications(tx, {
       organizationId: organization.id,
       users,
     });

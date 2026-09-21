@@ -215,6 +215,14 @@ export const ACCESS_POLICY_SEEDS = [
     ["ADMIN"],
   ),
 
+  allow(
+    "customerDelete",
+    "ALLOW_ADMIN_CUSTOMER_DELETE",
+    "customer.delete",
+    "CUSTOMER",
+    ["ADMIN"],
+  ),
+
   allow("kycDelete", "ALLOW_ADMIN_KYC_DELETE", "kyc.delete", "KYC_CASE", [
     "ADMIN",
   ]),

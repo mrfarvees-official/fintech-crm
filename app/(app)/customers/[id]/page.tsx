@@ -58,7 +58,7 @@ export default async function CustomerDetailPage({
         </h1>
         {canDelete && (
           <DeleteButton
-            onDelete={() => deleteCustomerAction(customer.id)}
+            onDelete={deleteCustomerAction.bind(null, customer.id)}
             confirmText="Delete this customer? This cannot be undone."
           />
         )}

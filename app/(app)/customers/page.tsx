@@ -163,7 +163,12 @@ export default async function CustomersPage({
                         View
                       </Link>
                     )}
-                    {c.canDelete && <DeleteButton onDelete={() => deleteCustomerAction(c.id)} confirmText="Delete this customer? This cannot be undone." />}
+                    {c.canDelete && (
+                      <DeleteButton
+                        onDelete={deleteCustomerAction.bind(null, c.id)}
+                        confirmText="Delete this customer? This cannot be undone."
+                      />
+                    )}
                   </div>
                 </td>
               </tr>

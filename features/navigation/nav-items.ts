@@ -11,6 +11,7 @@ export const PRIMARY_NAV: NavItem[] = [
 ];
 
 export const SETTINGS_NAV: NavItem[] = [
+  { href: "/settings/profile", label: "Profile" },
   { href: "/settings/sessions", label: "Sessions" },
   {
     href: "/settings/tenant",

@@ -49,6 +49,11 @@ export interface EvalResult {
   reasons: string[];
 }
 
+export interface AccessResult {
+  allowed: boolean;
+  reason: string;
+}
+
 function compare(
   actual: unknown,
   operator: Operator,
@@ -201,6 +206,45 @@ async function loadPolicies(
  * - If active PBAC policies exist for this action/resourceType, they decide (DENY wins, else ALLOW, else fall through).
  * - Otherwise, falls back to the caller's static RBAC permission set (action code === permission code).
  */
+export async function canWithReason(
+  organizationId: number,
+  subject: AttrBag,
+  rbacPermissions: Set<string>,
+  action: string,
+  resourceType: string,
+  resource: AttrBag = {},
+  context: AttrBag = {},
+): Promise<AccessResult> {
+  const policyList = await loadPolicies(organizationId, action, resourceType);
+
+  if (policyList.length > 0) {
+    const result = evaluatePolicySet(policyList, subject, resource, context);
+    if (result.decision === "ALLOW") {
+      return { allowed: true, reason: "Allowed by policy." };
+    }
+    if (result.decision === "DENY") {
+      return {
+        allowed: false,
+        reason:
+          result.reasons[0] ??
+          `A policy explicitly denies "${action}" on "${resourceType}".`,
+      };
+    }
+    // NOT_APPLICABLE — policies exist for this action/resourceType, none matched this subject/resource.
+  }
+
+  const rbacAllowed = rbacPermissions.has(action);
+  return {
+    allowed: rbacAllowed,
+    reason: rbacAllowed
+      ? "Allowed by role permission."
+      : policyList.length > 0
+        ? `No policy for "${action}" on "${resourceType}" matches your account.`
+        : `No policy exists for "${action}" on "${resourceType}", and no role grants it.`,
+  };
+}
+
+// was a standalone implementation — now delegates so both paths always agree
 export async function can(
   organizationId: number,
   subject: AttrBag,
@@ -210,12 +254,15 @@ export async function can(
   resource: AttrBag = {},
   context: AttrBag = {},
 ): Promise<boolean> {
-  const policyList = await loadPolicies(organizationId, action, resourceType);
-  if (policyList.length > 0) {
-    const result = evaluatePolicySet(policyList, subject, resource, context);
-    if (result.decision === "ALLOW") return true;
-    if (result.decision === "DENY") return false;
-    // NOT_APPLICABLE falls through to RBAC
-  }
-  return rbacPermissions.has(action);
+  return (
+    await canWithReason(
+      organizationId,
+      subject,
+      rbacPermissions,
+      action,
+      resourceType,
+      resource,
+      context,
+    )
+  ).allowed;
 }

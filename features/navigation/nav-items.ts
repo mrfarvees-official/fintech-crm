@@ -41,7 +41,7 @@ export const SETTINGS_NAV: NavItem[] = [
   {
     href: "/settings/tenant",
     label: "Tenant",
-    gate: { action: "tenant.manage", resourceType: "organization" },
+    ownerOnly: true, // was: gate: { action: "tenant.manage", resourceType: "organization" }
   },
   {
     href: "/settings/permissions",

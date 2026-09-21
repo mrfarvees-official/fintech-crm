@@ -2,23 +2,28 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getUserPermissions } from "@/lib/auth/rbac";
-import { can, type AttrBag } from "@/lib/auth/pbac";
+import {
+  canWithReason,
+  type AttrBag,
+  type AccessResult,
+} from "@/lib/auth/pbac";
 
-export async function checkPermission(
+export async function checkPermissionWithReason(
   action: string,
   resourceType: string,
   resource: AttrBag = {},
   context: AttrBag = {},
-): Promise<boolean> {
+): Promise<AccessResult> {
   const user = await getCurrentUser();
   const permissionCodes = await getUserPermissions();
 
-  return can(
+  return canWithReason(
     user.organizationId,
     {
       id: user.id,
       department: user.department,
       organizationId: user.organizationId,
+      status: user.status,
     },
     permissionCodes,
     action,
@@ -26,6 +31,17 @@ export async function checkPermission(
     resource,
     context,
   );
+}
+
+export async function checkPermission(
+  action: string,
+  resourceType: string,
+  resource: AttrBag = {},
+  context: AttrBag = {},
+): Promise<boolean> {
+  return (
+    await checkPermissionWithReason(action, resourceType, resource, context)
+  ).allowed;
 }
 
 interface CanProps {
@@ -54,7 +70,6 @@ export async function Can({
   return allowed ? <>{children}</> : <>{fallback}</>;
 }
 
-/** Use at the top of a Server Component page — 404s when the permission is missing. */
 export async function requirePermissionPage(
   action: string,
   resourceType: string,

@@ -207,4 +207,31 @@ export const ACCESS_POLICY_SEEDS = [
     "policy",
     ["MANAGEMENT", "ADMIN"],
   ),
+  allow(
+    "customerNoteDelete",
+    "ALLOW_ADMIN_CUSTOMER_NOTE_DELETE",
+    "customer_note.delete",
+    "CUSTOMER_NOTE",
+    ["ADMIN"],
+  ),
+
+  allow("kycDelete", "ALLOW_ADMIN_KYC_DELETE", "kyc.delete", "KYC_CASE", [
+    "ADMIN",
+  ]),
+
+  allow(
+    "kycDocDelete",
+    "ALLOW_RM_ADMIN_KYC_DOC_DELETE",
+    "kyc_document.delete",
+    "KYC_DOCUMENT",
+    ["RELATIONSHIP", "ADMIN"],
+  ),
+
+  allow(
+    "notificationDelete",
+    "ALLOW_ALL_NOTIFICATION_DELETE",
+    "notification.delete",
+    "NOTIFICATION",
+    ALL,
+  ),
 ] as const;

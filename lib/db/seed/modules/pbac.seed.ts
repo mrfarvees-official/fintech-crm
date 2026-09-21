@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/schema";
 
 import { POLICY_SEEDS } from "../data/policies";
+import { ACCESS_POLICY_SEEDS } from "../data/access-policies";
 
 import type { SeedTransaction } from "../types";
 
@@ -23,7 +24,7 @@ export async function seedPbac(
 ) {
   const seededPolicies: Record<string, Policy> = {};
 
-  for (const seed of POLICY_SEEDS) {
+  for (const seed of [...POLICY_SEEDS, ...ACCESS_POLICY_SEEDS]) {
     const [existingPolicy] = await tx
       .select()
       .from(policies)

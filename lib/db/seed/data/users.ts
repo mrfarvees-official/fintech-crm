@@ -8,6 +8,12 @@ export const DEMO_USERS = [
     department: "RELATIONSHIP",
   },
   {
+    key: "relationshipManager2",
+    name: "Kasun Rathnayake",
+    email: "rm2@fintech.local",
+    department: "RELATIONSHIP",
+  },
+  {
     key: "kycAnalyst",
     name: "Anushka Fernando",
     email: "analyst@fintech.local",
@@ -30,5 +36,12 @@ export const DEMO_USERS = [
     name: "System Administrator",
     email: "admin@fintech.local",
     department: "ADMIN",
+  },
+  {
+    key: "formerEmployee",
+    name: "Former Employee",
+    email: "suspended@fintech.local",
+    department: "RELATIONSHIP",
+    status: "SUSPENDED",
   },
 ] as const;

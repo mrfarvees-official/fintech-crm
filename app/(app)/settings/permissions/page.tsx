@@ -99,8 +99,11 @@ export default async function PermissionsPage() {
 
       <h2 className="mt-10 font-serif text-lg text-ink">Test a policy</h2>
       <PolicyTester
-        policies={orgPolicies.map((p) => ({ id: p.id, name: p.name }))}
-      />
+        policies={orgPolicies.map((p) => ({
+          id: p.id,
+          name: p.name,
+          resourceType: p.resourceType,
+        }))} orgUsers={[]}      />
     </div>
   );
 }

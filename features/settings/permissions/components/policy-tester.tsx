@@ -2,36 +2,51 @@
 import { useState, useTransition } from "react";
 import { testPolicy } from "@/features/authorization/test-policy";
 import type { EvalResult } from "@/lib/auth/pbac";
+import { AttrBagEditor, type AttrRow } from "./attribute-bag-editor";
+import { attributesFor } from "../attribute-catalog";
+import type { OrgUser } from "./rule-list-editor";
+
+type PolicyOption = { id: number; name: string; resourceType: string };
+
+function toBag(rows: AttrRow[], catalog: ReturnType<typeof attributesFor>) {
+  const bag: Record<string, unknown> = {};
+  for (const row of rows) {
+    if (!row.attribute) continue;
+    const def = catalog.find((a) => a.key === row.attribute);
+    bag[row.attribute] = def?.isNumeric ? Number(row.value) : row.value;
+  }
+  return bag;
+}
 
 export function PolicyTester({
   policies,
+  orgUsers,
 }: {
-  policies: { id: number; name: string }[];
+  policies: PolicyOption[];
+  orgUsers: OrgUser[];
 }) {
   const [policyId, setPolicyId] = useState(policies[0]?.id);
-  const [subject, setSubject] = useState('{ "id": 1 }');
-  const [resource, setResource] = useState('{ "ownerId": 1 }');
-  const [context, setContext] = useState("{}");
+  const resourceType =
+    policies.find((p) => p.id === policyId)?.resourceType ?? "";
+
+  const [subjectRows, setSubjectRows] = useState<AttrRow[]>([
+    { attribute: "id", value: "" },
+  ]);
+  const [resourceRows, setResourceRows] = useState<AttrRow[]>([]);
+  const [contextRows, setContextRows] = useState<AttrRow[]>([]);
   const [result, setResult] = useState<EvalResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   function run() {
     if (!policyId) return;
     startTransition(async () => {
-      try {
-        const res = await testPolicy(
-          policyId,
-          JSON.parse(subject),
-          JSON.parse(resource),
-          JSON.parse(context),
-        );
-        setResult(res);
-      } catch {
-        setResult({
-          decision: "NOT_APPLICABLE",
-          reasons: ["Invalid JSON input"],
-        });
-      }
+      const res = await testPolicy(
+        policyId,
+        toBag(subjectRows, attributesFor("SUBJECT", resourceType)),
+        toBag(resourceRows, attributesFor("RESOURCE", resourceType)),
+        toBag(contextRows, attributesFor("CONTEXT", resourceType)),
+      );
+      setResult(res);
     });
   }
 
@@ -52,29 +67,35 @@ export function PolicyTester({
         </select>
       </label>
 
-      {[
-        ["Subject", subject, setSubject],
-        ["Resource", resource, setResource],
-        ["Context", context, setContext],
-      ].map(([label, value, setter]) => (
-        <label
-          key={label as string}
-          className="mt-3 block text-sm font-medium text-ink-soft"
-        >
-          {label as string} (JSON)
-          <textarea
-            value={value as string}
-            onChange={(e) => (setter as (v: string) => void)(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 font-mono text-xs"
-          />
-        </label>
-      ))}
+      <AttrBagEditor
+        label="Sample subject"
+        rows={subjectRows}
+        onChange={setSubjectRows}
+        source="SUBJECT"
+        resourceType={resourceType}
+        orgUsers={orgUsers}
+      />
+      <AttrBagEditor
+        label="Sample resource"
+        rows={resourceRows}
+        onChange={setResourceRows}
+        source="RESOURCE"
+        resourceType={resourceType}
+        orgUsers={orgUsers}
+      />
+      <AttrBagEditor
+        label="Sample context"
+        rows={contextRows}
+        onChange={setContextRows}
+        source="CONTEXT"
+        resourceType={resourceType}
+        orgUsers={orgUsers}
+      />
 
       <button
         onClick={run}
         disabled={pending}
-        className="mt-4 rounded-md bg-ledger px-4 py-2 text-sm font-medium text-white"
+        className="mt-4 rounded-md bg-ledger px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {pending ? "Running…" : "Run test"}
       </button>

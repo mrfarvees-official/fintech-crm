@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   policies,
   policySubjects,
   policyResources,
   policyConditions,
+  users,
 } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { requireTenantOwnerPage } from "@/lib/auth/tenant";
@@ -29,7 +30,7 @@ export default async function EditPolicyPage({
     .limit(1);
   if (!policy || policy.organizationId !== user.organizationId) notFound();
 
-  const [subjects, resources, conditions] = await Promise.all([
+  const [subjects, resources, conditions, orgUsers] = await Promise.all([
     db
       .select()
       .from(policySubjects)
@@ -42,12 +43,23 @@ export default async function EditPolicyPage({
       .select()
       .from(policyConditions)
       .where(eq(policyConditions.policyId, policyId)),
+    db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(
+        and(
+          eq(users.organizationId, user.organizationId),
+          eq(users.status, "ACTIVE"),
+        ),
+      )
+      .orderBy(users.name),
   ]);
 
   return (
     <div>
       <h1 className="font-serif text-2xl text-ink">Edit policy</h1>
       <PolicyForm
+        orgUsers={orgUsers}
         policy={{
           id: policy.id,
           name: policy.name,

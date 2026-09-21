@@ -4,10 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { users } from "@/lib/db/schema";
 
-import {
-  DEMO_USERS,
-  DEMO_USER_PASSWORD,
-} from "../data/users";
+import { DEMO_USERS, DEMO_USER_PASSWORD } from "../data/users";
 
 import type { SeedTransaction } from "../types";
 
@@ -16,11 +13,7 @@ type User = typeof users.$inferSelect;
 function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
 
-  const hash = scryptSync(
-    password,
-    salt,
-    64,
-  ).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
 
   return `scrypt$${salt}$${hash}`;
 }
@@ -41,10 +34,7 @@ export async function seedUsers(
       .from(users)
       .where(
         and(
-          eq(
-            users.organizationId,
-            organizationId,
-          ),
+          eq(users.organizationId, organizationId),
           eq(users.email, seed.email),
         ),
       )
@@ -59,11 +49,9 @@ export async function seedUsers(
           organizationId,
           name: seed.name,
           email: seed.email,
-          passwordHash: hashPassword(
-            DEMO_USER_PASSWORD,
-          ),
+          passwordHash: hashPassword(DEMO_USER_PASSWORD),
           department: seed.department,
-          status: "ACTIVE",
+          status: "status" in seed ? seed.status : "ACTIVE", // was: status: "ACTIVE"
         })
         .$returningId();
 
@@ -73,19 +61,13 @@ export async function seedUsers(
         .where(eq(users.id, inserted.id))
         .limit(1);
 
-      console.log(
-        `  + User: ${seed.email}`,
-      );
+      console.log(`  + User: ${seed.email}`);
     } else {
-      console.log(
-        `  = User exists: ${seed.email}`,
-      );
+      console.log(`  = User exists: ${seed.email}`);
     }
 
     if (!user) {
-      throw new Error(
-        `Failed to seed user: ${seed.email}`,
-      );
+      throw new Error(`Failed to seed user: ${seed.email}`);
     }
 
     seededUsers[seed.key] = user;

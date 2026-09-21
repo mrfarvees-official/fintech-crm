@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isTenantOwner } from "@/lib/auth/tenant";
+import { Can } from "@/features/authorization/can";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -16,9 +17,15 @@ export default async function DashboardPage() {
       </p>
 
       <div className="mt-8 grid grid-cols-3 gap-4">
-        <PlaceholderCard label="Customers" />
-        <PlaceholderCard label="KYC cases" />
-        <PlaceholderCard label="Pending approvals" />
+        <Can action="customer.view" resourceType="CUSTOMER">
+          <PlaceholderCard label="Customers" />
+        </Can>
+        <Can action="kyc.view" resourceType="KYC_CASE">
+          <PlaceholderCard label="KYC cases" />
+        </Can>
+        <Can action="approval.view" resourceType="KYC_CASE">
+          <PlaceholderCard label="Pending approvals" />
+        </Can>
       </div>
     </div>
   );

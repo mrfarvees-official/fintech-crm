@@ -57,37 +57,54 @@ export async function createPolicyAction(
   }
   const data = parsed.data;
 
-  await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(policies)
-      .values({
-        organizationId: user.organizationId,
-        name: data.name,
-        code: data.code,
-        description: data.description ?? null,
-        action: data.action,
-        resourceType: data.resourceType,
-        effect: data.effect,
-        priority: data.priority,
-        isActive: data.isActive,
-      })
-      .$returningId();
+  try {
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(policies)
+        .values({
+          organizationId: user.organizationId,
+          name: data.name,
+          code: data.code,
+          description: data.description ?? null,
+          action: data.action,
+          resourceType: data.resourceType,
+          effect: data.effect,
+          priority: data.priority,
+          isActive: data.isActive,
+        })
+        .$returningId();
 
-    const policyId = row.id;
+      const policyId = row.id;
 
-    if (data.subjects.length)
-      await tx
-        .insert(policySubjects)
-        .values(data.subjects.map((r) => ({ policyId, ...r })));
-    if (data.resources.length)
-      await tx
-        .insert(policyResources)
-        .values(data.resources.map((r) => ({ policyId, ...r })));
-    if (data.conditions.length)
-      await tx
-        .insert(policyConditions)
-        .values(data.conditions.map((c) => ({ policyId, ...c })));
-  });
+      if (data.subjects.length)
+        await tx
+          .insert(policySubjects)
+          .values(data.subjects.map((r) => ({ policyId, ...r })));
+      if (data.resources.length)
+        await tx
+          .insert(policyResources)
+          .values(data.resources.map((r) => ({ policyId, ...r })));
+      if (data.conditions.length)
+        await tx
+          .insert(policyConditions)
+          .values(data.conditions.map((c) => ({ policyId, ...c })));
+    });
+  } catch (err) {
+    const mysqlCode =
+      (err as { cause?: { code?: string }; code?: string })?.cause?.code ??
+      (err as { code?: string })?.code;
+    if (mysqlCode === "ER_DUP_ENTRY") {
+      return {
+        errors: {
+          code: [
+            "This code is already used by another policy in your organization.",
+          ],
+        },
+        message: "Fix the errors below.",
+      };
+    }
+    throw err;
+  }
 
   revalidatePath("/settings/permissions");
   redirect("/settings/permissions");

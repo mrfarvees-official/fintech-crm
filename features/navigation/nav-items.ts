@@ -1,8 +1,9 @@
 export interface NavItem {
   href: string;
   label: string;
-  /** Omit for items visible to every authenticated user (e.g. Dashboard, Sessions). */
   gate?: { action: string; resourceType: string };
+  /** Structural tenant-ownership, checked via organizations.ownerId — never RBAC/PBAC. */
+  ownerOnly?: boolean;
 }
 
 export const PRIMARY_NAV: NavItem[] = [
@@ -20,7 +21,7 @@ export const SETTINGS_NAV: NavItem[] = [
   },
   {
     href: "/settings/permissions",
-    label: "Permissions",
-    gate: { action: "authorization.manage", resourceType: "policy" },
+    label: "Policies", // renamed — it's full PBAC CRUD now, not just a view
+    ownerOnly: true, // was: gate: { action: "authorization.manage", resourceType: "policy" }
   },
 ];

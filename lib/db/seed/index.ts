@@ -6,7 +6,10 @@ config({
   path: ".env",
 });
 
-import { seedOrganization } from "./modules/organization.seed";
+import {
+  seedOrganization,
+  ensureOrganizationOwner,
+} from "./modules/organization.seed";
 import { seedUsers } from "./modules/user.seed";
 import { seedPbac } from "./modules/pbac.seed";
 import { seedCrm } from "./modules/crm.seed";
@@ -26,6 +29,8 @@ async function seed() {
     const users = await seedUsers(tx, {
       organizationId: organization.id,
     });
+
+    await ensureOrganizationOwner(tx, organization, users.admin.id);
 
     await seedPbac(tx, {
       organizationId: organization.id,

@@ -8,7 +8,31 @@ export interface NavItem {
 
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/", label: "Dashboard" },
-  // customer, kyc, approvals items go here as those features land
+  {
+    href: "/customers",
+    label: "Customers",
+    gate: { action: "customer.view", resourceType: "CUSTOMER" },
+  },
+  {
+    href: "/kyc",
+    label: "KYC Cases",
+    gate: { action: "kyc.view", resourceType: "KYC_CASE" },
+  },
+  {
+    href: "/approvals",
+    label: "Approvals",
+    gate: { action: "approval.view", resourceType: "KYC_CASE" },
+  },
+  {
+    href: "/audit",
+    label: "Audit Log",
+    gate: { action: "audit.view", resourceType: "AUDIT_LOG" },
+  },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    gate: { action: "notification.view", resourceType: "NOTIFICATION" },
+  },
 ];
 
 export const SETTINGS_NAV: NavItem[] = [
@@ -21,7 +45,7 @@ export const SETTINGS_NAV: NavItem[] = [
   },
   {
     href: "/settings/permissions",
-    label: "Policies", // renamed — it's full PBAC CRUD now, not just a view
-    ownerOnly: true, // was: gate: { action: "authorization.manage", resourceType: "policy" }
+    label: "Policies",
+    ownerOnly: true,
   },
 ];

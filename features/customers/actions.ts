@@ -76,6 +76,15 @@ export async function createCustomerAction(
       })
       .$returningId();
     newId = row.id;
+
+    await recordAudit({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      action: "customer.create",
+      resourceType: "CUSTOMER",
+      resourceId: newId!,
+      newValues: data,
+    });
   } catch (err) {
     if (mysqlDupEntry(err)) {
       return {
@@ -142,6 +151,26 @@ export async function updateCustomerAction(
         status: data.status,
       })
       .where(eq(customers.id, customerId));
+
+    await recordAudit({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      action: "customer.update",
+      resourceType: "CUSTOMER",
+      resourceId: customerId,
+      oldValues: {
+        customerNumber: existing.customerNumber,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        status: existing.status,
+      },
+      newValues: {
+        customerNumber: data.customerNumber,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        status: data.status,
+      },
+    });
   } catch (err) {
     if (mysqlDupEntry(err)) {
       return {
@@ -185,6 +214,17 @@ export async function assignCustomerAction(
     .update(customers)
     .set({ assignedUserId })
     .where(eq(customers.id, customerId));
+
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "customer.assign",
+    resourceType: "CUSTOMER",
+    resourceId: customerId,
+    oldValues: { assignedUserId: existing.assignedUserId },
+    newValues: { assignedUserId },
+  });
+  
   revalidatePath("/customers");
   revalidatePath(`/customers/${customerId}`);
   return { message: "Assigned." };
@@ -194,6 +234,7 @@ import {
   guardDelete,
   isForeignKeyConstraintError,
 } from "@/lib/auth/delete-guard";
+import { recordAudit } from "@/lib/audit/log";
 
 export async function deleteCustomerAction(customerId: number) {
   const user = await getCurrentUser();
@@ -214,6 +255,18 @@ export async function deleteCustomerAction(customerId: number) {
 
   try {
     await db.delete(customers).where(eq(customers.id, customerId));
+    await recordAudit({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      action: "customer.delete",
+      resourceType: "CUSTOMER",
+      resourceId: customerId,
+      oldValues: {
+        customerNumber: existing.customerNumber,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+      },
+    });
   } catch (err) {
     if (isForeignKeyConstraintError(err)) {
       return {

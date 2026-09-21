@@ -242,4 +242,12 @@ export const ACCESS_POLICY_SEEDS = [
     "NOTIFICATION",
     ALL,
   ),
+
+  allow(
+    "kycReviewCompliance",
+    "ALLOW_COMPLIANCE_MGMT_KYC_REVIEW",
+    "kyc.review",
+    "KYC_CASE",
+    ["COMPLIANCE", "MANAGEMENT", "ADMIN"], // was: ["COMPLIANCE", "MANAGEMENT"]
+  ),
 ] as const;

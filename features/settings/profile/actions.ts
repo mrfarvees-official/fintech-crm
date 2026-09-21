@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { verifyPassword, hashPassword } from "@/lib/auth/passwords";
+import { recordAudit } from "@/lib/audit/log";
 import {
   UpdateNameSchema,
   ChangePasswordSchema,
@@ -26,6 +27,17 @@ export async function updateNameAction(
     .update(users)
     .set({ name: validated.data.name })
     .where(eq(users.id, user.id));
+
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "profile.update_name",
+    resourceType: "USER",
+    resourceId: user.id,
+    oldValues: { name: user.name },
+    newValues: { name: validated.data.name },
+  });
+
   revalidatePath("/settings/profile");
   return { message: "Saved." };
 }
@@ -61,6 +73,15 @@ export async function changePasswordAction(
     .update(users)
     .set({ passwordHash: hashPassword(validated.data.newPassword) })
     .where(eq(users.id, user.id));
+
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "profile.change_password",
+    resourceType: "USER",
+    resourceId: user.id,
+    // deliberately no oldValues/newValues — never log password material, even hashed
+  });
 
   return { message: "Password updated." };
 }

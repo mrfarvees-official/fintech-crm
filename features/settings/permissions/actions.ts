@@ -12,6 +12,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isTenantOwner } from "@/lib/auth/tenant";
 import { PolicySchema, type PolicyFormState } from "./schema";
+import { recordAudit } from "@/lib/audit/log";
 
 function parseRows(raw: FormDataEntryValue | null) {
   if (typeof raw !== "string" || !raw) return [];
@@ -58,6 +59,7 @@ export async function createPolicyAction(
   const data = parsed.data;
 
   try {
+    let newId: number | undefined;
     await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(policies)
@@ -75,6 +77,7 @@ export async function createPolicyAction(
         .$returningId();
 
       const policyId = row.id;
+      newId = row.id;
 
       if (data.subjects.length)
         await tx
@@ -88,6 +91,22 @@ export async function createPolicyAction(
         await tx
           .insert(policyConditions)
           .values(data.conditions.map((c) => ({ policyId, ...c })));
+    });
+
+    await recordAudit({
+      organizationId: user.organizationId,
+      actorId: user.id,
+      action: "policy.create",
+      resourceType: "policy",
+      resourceId: newId!,
+      newValues: {
+        name: data.name,
+        code: data.code,
+        action: data.action,
+        resourceType: data.resourceType,
+        effect: data.effect,
+        priority: data.priority,
+      },
     });
   } catch (err) {
     const mysqlCode =
@@ -178,6 +197,28 @@ export async function updatePolicyAction(
         .values(data.conditions.map((c) => ({ policyId, ...c })));
   });
 
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "policy.update",
+    resourceType: "policy",
+    resourceId: policyId,
+    oldValues: {
+      name: existing.name,
+      code: existing.code,
+      effect: existing.effect,
+      priority: existing.priority,
+      isActive: existing.isActive,
+    },
+    newValues: {
+      name: data.name,
+      code: data.code,
+      effect: data.effect,
+      priority: data.priority,
+      isActive: data.isActive,
+    },
+  });
+
   revalidatePath("/settings/permissions");
   redirect("/settings/permissions");
 }
@@ -194,5 +235,15 @@ export async function deletePolicyAction(policyId: number) {
   if (!existing || existing.organizationId !== user.organizationId) return;
 
   await db.delete(policies).where(eq(policies.id, policyId)); // children cascade
+
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "policy.delete",
+    resourceType: "policy",
+    resourceId: policyId,
+    oldValues: { name: existing.name, code: existing.code },
+  });
+  
   revalidatePath("/settings/permissions");
 }

@@ -7,6 +7,12 @@ import { customers } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { checkPermissionWithReason } from "@/features/authorization/can";
 import { CustomerSchema, type CustomerFormState } from "./schema";
+import {
+  guardDelete,
+  isForeignKeyConstraintError,
+} from "@/lib/auth/delete-guard";
+import { recordAudit } from "@/lib/audit/log";
+import { createNotification } from "@/lib/notifications/create";
 
 function readForm(formData: FormData) {
   const get = (k: string) => {
@@ -148,9 +154,24 @@ export async function updateCustomerAction(
         employer: data.employer,
         monthlyIncome:
           data.monthlyIncome != null ? String(data.monthlyIncome) : null,
+        assignedUserId: data.assignedUserId ?? null, // was missing — the edit form's dropdown did nothing before this
         status: data.status,
       })
       .where(eq(customers.id, customerId));
+
+    if (
+      data.assignedUserId &&
+      data.assignedUserId !== existing.assignedUserId &&
+      data.assignedUserId !== user.id
+    ) {
+      await createNotification({
+        organizationId: user.organizationId,
+        userId: data.assignedUserId,
+        type: "customer.assigned",
+        title: "New customer assigned to you",
+        message: `${data.firstName} ${data.lastName} (${data.customerNumber}) has been assigned to you.`,
+      });
+    }
 
     await recordAudit({
       organizationId: user.organizationId,
@@ -215,6 +236,20 @@ export async function assignCustomerAction(
     .set({ assignedUserId })
     .where(eq(customers.id, customerId));
 
+  if (
+    assignedUserId &&
+    assignedUserId !== existing.assignedUserId &&
+    assignedUserId !== user.id
+  ) {
+    await createNotification({
+      organizationId: user.organizationId,
+      userId: assignedUserId,
+      type: "customer.assigned",
+      title: "New customer assigned to you",
+      message: `${existing.firstName} ${existing.lastName} (${existing.customerNumber}) has been assigned to you.`,
+    });
+  }
+
   await recordAudit({
     organizationId: user.organizationId,
     actorId: user.id,
@@ -224,17 +259,11 @@ export async function assignCustomerAction(
     oldValues: { assignedUserId: existing.assignedUserId },
     newValues: { assignedUserId },
   });
-  
+
   revalidatePath("/customers");
   revalidatePath(`/customers/${customerId}`);
   return { message: "Assigned." };
 }
-
-import {
-  guardDelete,
-  isForeignKeyConstraintError,
-} from "@/lib/auth/delete-guard";
-import { recordAudit } from "@/lib/audit/log";
 
 export async function deleteCustomerAction(customerId: number) {
   const user = await getCurrentUser();

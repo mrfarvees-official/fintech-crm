@@ -32,3 +32,21 @@ export const isTenantOwner = cache(async (): Promise<boolean> => {
 export async function requireTenantOwnerPage(): Promise<void> {
   if (!(await isTenantOwner())) notFound();
 }
+
+/**
+ * Same structural pattern as isTenantOwner: deliberately independent of
+ * RBAC/PBAC. organizations.tenantAdminUserId is a single nullable column,
+ * so this can only ever be true for one user per org, and only within
+ * that user's own org (their user row lives inside that org already —
+ * there is no cross-tenant path here to guard against separately).
+ *
+ * checkPermissionWithReason() (features/authorization/can.tsx) is the only
+ * caller that should use this to bypass PBAC. Do not scatter additional
+ * bypass checks elsewhere — one chokepoint, same reasoning as the
+ * "status missing from subject bag" bug from earlier this session.
+ */
+export const isTenantAdmin = cache(async (): Promise<boolean> => {
+  const user = await getCurrentUser();
+  const org = await getCurrentOrganization();
+  return Boolean(org?.tenantAdminUserId) && org.tenantAdminUserId === user.id;
+});

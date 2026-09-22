@@ -2,6 +2,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getUserPermissions } from "@/lib/auth/rbac";
+import { isTenantAdmin } from "@/lib/auth/tenant";
 import {
   canWithReason,
   type AttrBag,
@@ -14,6 +15,16 @@ export async function checkPermissionWithReason(
   resource: AttrBag = {},
   context: AttrBag = {},
 ): Promise<AccessResult> {
+  // Single chokepoint for the tenant-admin bypass. Every permission check in
+  // the app funnels through here (Can, checkPermission, requirePermissionPage
+  // all delegate to this function), so this is the one place it needs to
+  // live — deliberately NOT inside evaluatePolicySet()/canWithReason() in
+  // pbac.ts, since those are pure policy evaluation also reused by the
+  // policy-test tooling, and shouldn't silently short-circuit.
+  if (await isTenantAdmin()) {
+    return { allowed: true, reason: "Allowed: tenant admin bypass." };
+  }
+
   const user = await getCurrentUser();
   const permissionCodes = await getUserPermissions();
 

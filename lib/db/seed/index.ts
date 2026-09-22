@@ -9,6 +9,7 @@ config({
 import {
   seedOrganization,
   ensureOrganizationOwner,
+  ensureTenantAdmin,
 } from "./modules/organization.seed";
 import { seedUsers } from "./modules/user.seed";
 import { seedPbac } from "./modules/pbac.seed";
@@ -31,6 +32,8 @@ async function seed() {
     });
 
     await ensureOrganizationOwner(tx, organization, users.admin.id);
+
+    await ensureTenantAdmin(tx, organization, users.tenantAdmin.id);
 
     await seedPbac(tx, {
       organizationId: organization.id,

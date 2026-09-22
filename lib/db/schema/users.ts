@@ -22,6 +22,12 @@ export const userDepartmentEnum = mysqlEnum("user_department", [
   "COMPLIANCE",
   "MANAGEMENT",
   "ADMIN",
+  // Distinct from ADMIN on purpose. ADMIN is a normal department that still
+  // goes through PBAC like everyone else (see the open "should ADMIN be a
+  // superuser" decision — this is NOT that). TENANT_ADMIN never needs a
+  // single PBAC policy: it bypasses evaluation entirely, and only for
+  // whichever one user organizations.tenantAdminUserId points at.
+  "TENANT_ADMIN",
 ]);
 
 export const users = mysqlTable(

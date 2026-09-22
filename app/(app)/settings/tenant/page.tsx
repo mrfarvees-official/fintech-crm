@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { organizations } from "@/lib/db/schema";
+import { organizations, users } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { requireTenantOwnerPage } from "@/lib/auth/tenant";
 import { TenantForm } from "@/features/settings/tenant/components/tenant-form";
@@ -15,5 +15,10 @@ export default async function TenantPage() {
     .where(eq(organizations.id, user.organizationId))
     .limit(1);
 
-  return <TenantForm organization={org} />;
+  const orgUsers = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.organizationId, user.organizationId));
+
+  return <TenantForm organization={org} users={orgUsers} />;
 }

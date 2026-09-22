@@ -20,6 +20,12 @@ export const organizations = mysqlTable(
 
     ownerId: bigint("owner_id", { mode: "number" }),
 
+    // Bare bigint (no .references()) — same pattern as ownerId, to avoid a
+    // circular import with users.ts (users.ts already imports organizations.ts).
+    // Nullable + single column, so "at most one tenant admin per org" is a
+    // structural guarantee, not an app-level check that can be forgotten.
+    tenantAdminUserId: bigint("tenant_admin_user_id", { mode: "number" }),
+
     name: varchar("name", { length: 150 }).notNull(),
 
     code: varchar("code", { length: 50 }).notNull(),

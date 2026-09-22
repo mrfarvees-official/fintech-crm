@@ -25,6 +25,30 @@ export async function ensureOrganizationOwner(
   console.log(`  + Organization owner set to user ${ownerId}`);
 }
 
+/**
+ * organizations.tenantAdminUserId is a single nullable column, so "one
+ * tenant admin per org" is enforced by the schema shape itself — this
+ * function just never overwrites an existing assignment on reseed,
+ * matching ensureOrganizationOwner's idempotency.
+ */
+export async function ensureTenantAdmin(
+  tx: SeedTransaction,
+  organization: typeof organizations.$inferSelect,
+  tenantAdminUserId: number,
+) {
+  if (organization.tenantAdminUserId) {
+    console.log(
+      `  = Tenant admin already set (user ${organization.tenantAdminUserId})`,
+    );
+    return;
+  }
+  await tx
+    .update(organizations)
+    .set({ tenantAdminUserId })
+    .where(eq(organizations.id, organization.id));
+  console.log(`  + Tenant admin set to user ${tenantAdminUserId}`);
+}
+
 export async function seedOrganization(tx: SeedTransaction) {
   const [existingOrganization] = await tx
     .select()

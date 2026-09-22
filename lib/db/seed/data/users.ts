@@ -38,6 +38,12 @@ export const DEMO_USERS = [
     department: "ADMIN",
   },
   {
+    key: "tenantAdmin",
+    name: "Tenant Administrator",
+    email: "tenantadmin@fintech.local",
+    department: "TENANT_ADMIN",
+  },
+  {
     key: "formerEmployee",
     name: "Former Employee",
     email: "suspended@fintech.local",

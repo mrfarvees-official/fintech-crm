@@ -247,4 +247,229 @@ export const POLICY_SEEDS = [
       },
     ],
   },
+  // --- Login policy ---------------------------------------------------
+  // action "auth.login" / resourceType "SESSION" is evaluated in
+  // features/auth/actions.ts BEFORE a session exists — there is no
+  // getCurrentUser()/getUserPermissions() yet, so the subject bag is built
+  // straight from the row just fetched by email, and the login attempt's
+  // own request context (time, presented device header) is passed in as
+  // CONTEXT. Same evaluatePolicySet()/canWithReason() engine as every
+  // other policy in this file — nothing login-specific about the engine,
+  // only about what gets passed in.
+  //
+  // Baseline ALLOW is required: without one, once these DENY policies
+  // exist for auth.login/SESSION, any login attempt that doesn't match a
+  // DENY falls through to NOT_APPLICABLE -> dead RBAC -> false, which
+  // would lock everyone out, not just the people these rules target.
+  {
+    key: "allowLoginBaseline",
+
+    policy: {
+      code: "ALLOW_LOGIN_BASELINE",
+      name: "Allow Login (baseline)",
+      description:
+        "Baseline allow for auth.login so the DENY login-policy rules below have something to override, rather than everyone falling through to the dead RBAC fallback.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "ALLOW" as const,
+      priority: 100,
+      isActive: true,
+    },
+
+    subjects: [],
+    resources: [],
+    conditions: [],
+  },
+
+  {
+    key: "denyStaffLoginBeforeHours",
+
+    policy: {
+      code: "DENY_STAFF_LOGIN_BEFORE_HOURS",
+      name: "Deny Staff Login Before 8 AM",
+      description:
+        "Staff (everyone except TENANT_ADMIN) may not sign in before 08:00, org local time.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "DENY" as const,
+      priority: 900,
+      isActive: true,
+    },
+
+    subjects: [
+      {
+        attribute: "department",
+        operator: "NOT_EQUALS" as const,
+        value: "TENANT_ADMIN",
+      },
+    ],
+
+    resources: [],
+
+    conditions: [
+      {
+        source: "CONTEXT" as const,
+        attribute: "hour",
+        operator: "LESS_THAN" as const,
+        value: "8",
+      },
+    ],
+  },
+
+  {
+    key: "denyStaffLoginAfterHours",
+
+    policy: {
+      code: "DENY_STAFF_LOGIN_AFTER_HOURS",
+      name: "Deny Staff Login After 8 PM",
+      description:
+        "Staff (everyone except TENANT_ADMIN) may not sign in at or after 20:00, org local time.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "DENY" as const,
+      priority: 900,
+      isActive: true,
+    },
+
+    subjects: [
+      {
+        attribute: "department",
+        operator: "NOT_EQUALS" as const,
+        value: "TENANT_ADMIN",
+      },
+    ],
+
+    resources: [],
+
+    conditions: [
+      {
+        source: "CONTEXT" as const,
+        attribute: "hour",
+        operator: "GREATER_THAN_OR_EQUAL" as const,
+        value: "20",
+      },
+    ],
+  },
+
+  {
+    key: "denyStaffLoginSunday",
+
+    policy: {
+      code: "DENY_STAFF_LOGIN_SUNDAY",
+      name: "Deny Staff Login on Sunday",
+      description:
+        "Staff (everyone except TENANT_ADMIN) may only sign in Monday–Saturday, org local time.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "DENY" as const,
+      priority: 900,
+      isActive: true,
+    },
+
+    subjects: [
+      {
+        attribute: "department",
+        operator: "NOT_EQUALS" as const,
+        value: "TENANT_ADMIN",
+      },
+    ],
+
+    resources: [],
+
+    conditions: [
+      {
+        source: "CONTEXT" as const,
+        attribute: "dayOfWeek",
+        operator: "EQUALS" as const,
+        value: "0",
+      },
+    ],
+  },
+
+  {
+    key: "denyTenantAdminUnregisteredDevice",
+
+    policy: {
+      code: "DENY_TENANT_ADMIN_UNREGISTERED_DEVICE",
+      name: "Deny Tenant Admin Login From Unregistered Device",
+      description:
+        "TENANT_ADMIN may only sign in from the device MAC registered in organization settings, once one is configured.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "DENY" as const,
+      priority: 900,
+      isActive: true,
+    },
+
+    subjects: [
+      {
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "TENANT_ADMIN",
+      },
+    ],
+
+    // EXISTS here is deliberate: if the org hasn't configured
+    // organizationSettings.tenantAdminAllowedMac yet, this whole policy
+    // should not match at all (fail-open on missing configuration), not
+    // fail-closed and lock the tenant admin out before anyone's set a
+    // device. Once a MAC is configured, the CONTEXT condition below
+    // starts actually comparing it.
+    resources: [
+      {
+        attribute: "allowedMac",
+        operator: "EXISTS" as const,
+        value: "", // ignored by EXISTS — see compare() in lib/auth/pbac.ts. Using "" instead of null works around a dedup-query gap in pbac.seed.ts (eq() vs isNull()) rather than touching that shared seed infra for one policy.
+      },
+    ],
+
+    conditions: [
+      {
+        source: "CONTEXT" as const,
+        attribute: "deviceMac",
+        operator: "NOT_EQUALS" as const,
+        value: "$resource.allowedMac",
+      },
+    ],
+  },
+  {
+    key: "denyTenantAdminUnknownIp",
+
+    policy: {
+      code: "DENY_TENANT_ADMIN_UNKNOWN_IP",
+      name: "Deny Tenant Admin Login From Unknown IP",
+      description:
+        "TENANT_ADMIN may only sign in from the IP address registered in organization settings, once one is configured. The practical, actually-verifiable alternative to the MAC-based policy above (which needs network infrastructure this deployment may not have) — see lib/auth/login-policy.ts.",
+      action: "auth.login",
+      resourceType: "SESSION",
+      effect: "DENY" as const,
+      priority: 900,
+      isActive: true,
+    },
+
+    subjects: [
+      {
+        attribute: "department",
+        operator: "EQUALS" as const,
+        value: "TENANT_ADMIN",
+      },
+    ],
+
+    resources: [
+      {
+        attribute: "allowedIp",
+        operator: "EXISTS" as const,
+        value: "",
+      },
+    ],
+
+    conditions: [
+      {
+        source: "CONTEXT" as const,
+        attribute: "ip",
+        operator: "NOT_EQUALS" as const,
+        value: "$resource.allowedIp",
+      },
+    ],
+  },
 ] as const;

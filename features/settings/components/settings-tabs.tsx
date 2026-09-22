@@ -1,18 +1,13 @@
 import { Can } from "@/features/authorization/can";
-import { IsOwner } from "@/features/authorization/is-owner";
 import { SETTINGS_NAV } from "@/features/navigation/nav-items";
 import { SettingsTabLink } from "./settings-tab-link";
 
 export async function SettingsTabs() {
   return (
     <nav className="flex gap-1 border-b border-line px-8">
-      {SETTINGS_NAV.map((item) => {
+      {SETTINGS_NAV.map((item, id) => {
         if (item.ownerOnly) {
-          return (
-            <IsOwner key={item.href}>
-              <SettingsTabLink href={item.href} label={item.label} />
-            </IsOwner>
-          );
+          return <SettingsTabLink key={id} href={item.href} label={item.label} />;
         }
         if (item.gate) {
           return (

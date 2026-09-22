@@ -14,6 +14,7 @@ const DEPARTMENT_OPTIONS = [
   { value: "COMPLIANCE", label: "Compliance" },
   { value: "MANAGEMENT", label: "Management" },
   { value: "ADMIN", label: "Admin" },
+  { value: "TENANT_ADMIN", label: "Tenant Admin" },
 ];
 
 const USER_STATUS_OPTIONS = [
@@ -126,10 +127,46 @@ export const RESOURCE_ATTRIBUTES: Record<string, AttributeOption[]> = {
       isNumeric: true,
     },
   ],
+  SESSION: [
+    {
+      key: "allowedMac",
+      label: "Tenant admin's registered device MAC (org setting)",
+      valueKind: "text",
+    },
+    {
+      key: "allowedIp",
+      label: "Tenant admin's allowed IP address (org setting)",
+      valueKind: "text",
+    },
+  ],
 };
 
 export const RESOURCE_TYPE_OPTIONS = Object.keys(RESOURCE_ATTRIBUTES);
-export const CONTEXT_ATTRIBUTES: AttributeOption[] = [];
+
+export const CONTEXT_ATTRIBUTES: AttributeOption[] = [
+  {
+    key: "hour",
+    label: "Hour of day at login (0–23, org timezone)",
+    valueKind: "text",
+    isNumeric: true,
+  },
+  {
+    key: "dayOfWeek",
+    label: "Day of week at login (0=Sun … 6=Sat, org timezone)",
+    valueKind: "text",
+    isNumeric: true,
+  },
+  {
+    key: "deviceMac",
+    label: "Device MAC presented at login (see caveat in login-policy.ts)",
+    valueKind: "text",
+  },
+  {
+    key: "ip",
+    label: "Client IP at login",
+    valueKind: "text",
+  },
+];
 
 export function attributesFor(
   source: "SUBJECT" | "RESOURCE" | "CONTEXT",

@@ -2,14 +2,15 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customers, kycCases, notifications } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { isTenantOwner } from "@/lib/auth/tenant";
+import { isExactTenantOwner, isTenantAdmin } from "@/lib/auth/tenant";
 import { Can } from "@/features/authorization/can";
 import { getPendingApprovalsForUser } from "@/features/approvals/get-pending";
 import { GrowthChart } from "@/features/dashboard/components/growth-chart";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  const owner = await isTenantOwner();
+  const owner = await isExactTenantOwner();
+  const tenantAdmin = await isTenantAdmin();
 
   const [customerRows, kycRows, notificationRows, pendingApprovals] =
     await Promise.all([
@@ -58,7 +59,8 @@ export default async function DashboardPage() {
       </h1>
       <p className="mt-1 text-sm text-steel">
         {user.organizationName} · {user.department}
-        {owner && " · Tenant owner"}
+        {owner && " · Tenant admin"}
+        {tenantAdmin && " · Tenant owner"}
       </p>
 
       <div className="mt-8 grid grid-cols-4 gap-4">

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { users, organizationSettings } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/auth/passwords";
 import {
   createSessionCookie,
@@ -11,6 +11,7 @@ import {
   readSessionCookie,
 } from "@/lib/auth/session";
 import { recordSession, revokeSession } from "@/lib/auth/session-device";
+import { checkLoginPolicy } from "@/lib/auth/login-policy";
 import { LoginSchema, type LoginState } from "./schema";
 
 export async function loginAction(
@@ -41,11 +42,40 @@ export async function loginAction(
   }
 
   const h = await headers();
-  const sessionId = await recordSession(
-    user.id,
-    h.get("user-agent"),
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  const clientIp = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const [settings] = await db
+    .select()
+    .from(organizationSettings)
+    .where(eq(organizationSettings.organizationId, user.organizationId))
+    .limit(1);
+
+  // Real PBAC decides this, not a hardcoded rule here — see
+  // lib/auth/login-policy.ts and the seeded auth.login/SESSION policies in
+  // lib/db/seed/data/policies.ts (editable at runtime from Settings →
+  // Permissions, same as every other policy in this app).
+  const loginPolicy = await checkLoginPolicy(
+    {
+      id: user.id,
+      organizationId: user.organizationId,
+      department: user.department,
+      status: user.status,
+    },
+    {
+      now: new Date(),
+      timezone: settings?.loginPolicyTimezone ?? "UTC",
+      presentedMac: h.get("x-device-mac"),
+      allowedMac: settings?.tenantAdminAllowedMac ?? null,
+      presentedIp: clientIp,
+      allowedIp: settings?.tenantAdminAllowedIp ?? null,
+    },
   );
+
+  if (!loginPolicy.allowed) {
+    return { message: loginPolicy.reason };
+  }
+
+  const sessionId = await recordSession(user.id, h.get("user-agent"), clientIp);
 
   await createSessionCookie({
     userId: user.id,

@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { organizations, users } from "@/lib/db/schema";
+import { organizations, users, organizationSettings } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isTenantOwner } from "@/lib/auth/tenant";
 import { recordAudit } from "@/lib/audit/log";
@@ -50,11 +50,14 @@ export async function updateTenantAction(
  * "at most one per tenant" falls out of that column shape, there's no
  * separate uniqueness check to maintain here.
  *
- * Gated by isTenantOwner(), same as updateTenantAction — the owner is who
- * grants this, not the tenant admin themself (a tenant admin bypasses PBAC,
- * but that bypass is scoped in tenant.ts to checkPermissionWithReason, and
- * this action deliberately doesn't route through that, so bypass status has
- * no bearing on who can reassign the seat).
+ * Gated by isTenantOwner(), which now means owner OR tenant admin (see
+ * lib/auth/tenant.ts). Worth knowing: this means a tenant admin can
+ * reassign the seat to someone else, or simply leave it assigned to
+ * themselves indefinitely — there's no separate control preventing that
+ * beyond the owner noticing and reassigning it back. That's a deliberate
+ * consequence of "full superuser," not an oversight; say so if you want
+ * this one action to stay strictly owner-only while everything else here
+ * opens up to the tenant admin.
  */
 export async function updateTenantAdminAction(
   _prevState: unknown,
@@ -116,4 +119,63 @@ export async function updateTenantAdminAction(
 
   revalidatePath("/settings/tenant");
   return { message: "Tenant admin updated." };
+}
+
+/**
+ * Sets organizationSettings.tenantAdminAllowedIp — the value the
+ * DENY_TENANT_ADMIN_UNKNOWN_IP policy (see lib/db/seed/data/policies.ts)
+ * compares against at login via $resource.allowedIp. Empty input clears
+ * it, which makes that policy's EXISTS resource rule stop matching
+ * entirely — fail-open, not fail-closed, same reasoning as the MAC
+ * field: an org should never get locked out just because a settings
+ * field happens to be unset.
+ *
+ * This does NOT touch tenantAdminAllowedMac — that field is left in
+ * place but is effectively inert unless something in front of this app
+ * actually injects a trustworthy X-Device-Mac header (see the caveat on
+ * that column in lib/db/schema/settings.ts and in lib/auth/login-policy.ts).
+ */
+export async function updateTenantAdminAllowedIpAction(
+  _prevState: unknown,
+  formData: FormData,
+) {
+  if (!(await isTenantOwner())) {
+    return { message: "You don't have permission to manage this tenant." };
+  }
+  const user = await getCurrentUser();
+
+  const raw = formData.get("tenantAdminAllowedIp");
+  const nextAllowedIp =
+    typeof raw === "string" && raw.trim() ? raw.trim() : null;
+
+  const [existing] = await db
+    .select({ tenantAdminAllowedIp: organizationSettings.tenantAdminAllowedIp })
+    .from(organizationSettings)
+    .where(eq(organizationSettings.organizationId, user.organizationId))
+    .limit(1);
+
+  if (!existing) {
+    return {
+      message:
+        "No organization settings row found for this tenant — check that the seed has run.",
+    };
+  }
+
+  await db
+    .update(organizationSettings)
+    .set({ tenantAdminAllowedIp: nextAllowedIp })
+    .where(eq(organizationSettings.organizationId, user.organizationId));
+
+  await recordAudit({
+    organizationId: user.organizationId,
+    actorId: user.id,
+    action: "tenant.admin.allowedIp.update",
+    resourceType: "organization",
+    resourceId: user.organizationId,
+    oldValues: { tenantAdminAllowedIp: existing.tenantAdminAllowedIp },
+    newValues: { tenantAdminAllowedIp: nextAllowedIp },
+  });
+
+  revalidatePath("/settings/tenant");
+  return { message: "Allowed IP updated." };
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { organizations, users } from "@/lib/db/schema";
+import { organizations, users, organizationSettings } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { requireTenantOwnerPage } from "@/lib/auth/tenant";
 import { TenantForm } from "@/features/settings/tenant/components/tenant-form";
@@ -20,5 +20,19 @@ export default async function TenantPage() {
     .from(users)
     .where(eq(users.organizationId, user.organizationId));
 
-  return <TenantForm organization={org} users={orgUsers} />;
+  const [settings] = await db
+    .select({
+      tenantAdminAllowedIp: organizationSettings.tenantAdminAllowedIp,
+    })
+    .from(organizationSettings)
+    .where(eq(organizationSettings.organizationId, user.organizationId))
+    .limit(1);
+
+  return (
+    <TenantForm
+      organization={org}
+      users={orgUsers}
+      tenantAdminAllowedIp={settings?.tenantAdminAllowedIp ?? null}
+    />
+  );
 }
